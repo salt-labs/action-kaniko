@@ -74,6 +74,7 @@ jobs:
           --rm
           --name test
           test:latest
+          --help
 
       # Turtles all the way down
       - id: action_test
