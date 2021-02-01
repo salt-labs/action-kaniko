@@ -1,0 +1,209 @@
+##################################################
+# Name: release.yaml
+# Description: Workflow to create and publish to a GitHub release
+##################################################
+
+name: Release
+
+on:
+  # Treating approved PRs into trunk as "pre-releases"
+  pull_request_review:
+    branches:
+      - "trunk"
+    types:
+      - submitted
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+  # Treating merged PRs into trunk as "releases"
+  push:
+    branches:
+      - "trunk"
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+
+env:
+  PROJECT: ${{ github.repository }}
+
+  REGISTRY_NAMESPACE: ${{ github.repository_owner }}
+  REGISTRY_USERNAME: ${{ github.actor }}
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PAT }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  #########################
+  # Create a GitHub Release
+  #########################
+
+  create_release:
+    name: Create GitHub Release
+
+    runs-on: ${{ matrix.os }}
+
+    timeout-minutes: 30
+    continue-on-error: false
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - ubuntu-latest
+
+    steps:
+      - id: checkout_repository
+        name: Checkout repository with all history and tags
+        uses: actions/checkout@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.PAT_GITHUB_REPOS }}
+        with:
+          fetch-depth: 0
+          submodules: false
+          clean: true
+          persist-credentials: true
+
+      - id: prep_release
+        name: Prepare for Release
+        uses: salt-labs/action-release-prep@trunk
+        with:
+          loglevel: "INFO"
+          tag_enable: "TRUE"
+          tag_force: "FALSE"
+          git_pretty_format: "* %h %G? %aN - %s"
+          calver_scheme: "YYYY.MM.GEN"
+          calver_split: "."
+          calver_split_mod: "."
+          timezone: "Australia/Sydney"
+
+      - id: create_release_prerelease
+        name: Create Pre-Release
+        if: github.event.review.state == 'approved'
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.prep_release.outputs.calver }}
+          release_name: ${{ steps.prep_release.outputs.calver }}
+          body: |
+            # ${{ steps.prep_release.outputs.repo_name }} changelog
+
+            ${{ steps.prep_release.outputs.changelog }}
+
+            # Containers
+
+            ## ghcr.io
+
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}:${{ steps.prep_release.outputs.calver }}
+            ```
+
+          draft: false
+          prerelease: true
+
+      - id: create_release
+        if: github.event_name == 'push' && contains( github.ref, 'trunk' )
+        name: Create Release Draft
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.prep_release.outputs.calver }}
+          release_name: ${{ steps.prep_release.outputs.calver }}
+          body: |
+            # ${{ steps.prep_release.outputs.repo_name }} changelog
+
+            ${{ steps.prep_release.outputs.changelog }}
+
+            # Containers
+
+            ## ghcr.io
+
+            ```bash
+            docker pull ghcr.io/${{ github.repository }}:${{ steps.prep_release.outputs.calver }}
+            ```
+
+          draft: true
+          prerelease: false
+
+      - id: test_dockerfile
+        name: Test for a Dockerfile
+        shell: bash
+        run: |
+          if [ -f "Dockerfile" ];
+          then
+            echo '::set-output name=publish::TRUE'
+          fi
+
+    outputs:
+      # Prep-Release
+      calver: ${{ steps.prep_release.outputs.calver }}
+      changelog: ${{ steps.prep_release.outputs.changelog }}
+      repo_owner: ${{ steps.prep_release.outputs.repo_owner }}
+      repo_name: ${{ steps.prep_release.outputs.repo_name }}
+
+      # Pre-Release
+      upload_url_prerelease: ${{ steps.create_release_prerelease.outputs.upload_url }}
+
+      # Release
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+      # Container
+      publish_container: ${{ steps.test_dockerfile.outputs.publish }}
+
+  #########################
+  # Publish Container
+  #########################
+
+  release_publish_docker:
+    name: Publish Release to OCI Container Registry
+
+    needs:
+      - create_release
+
+    runs-on: ${{ matrix.os }}
+
+    timeout-minutes: 30
+    continue-on-error: false
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - ubuntu-latest
+
+    # Only run if there is a Dockerfile in this project
+    if: ${{ needs.create_release.outputs.publish_container }}
+
+    steps:
+      - id: checkout_repository
+        name: Checkout repository with all history and tags
+        uses: actions/checkout@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          fetch-depth: 0
+          submodules: false
+          clean: true
+          persist-credentials: true
+
+      - id: publish_package_container
+        name: Publish Package to Container Registry
+        #uses: docker://ghcr.io/salt-labs/action-kaniko:stable
+        uses: ./
+        with:
+          loglevel: "INFO"
+          registry: ghcr.io
+          registry_namespace: ${{ env.REGISTRY_NAMESPACE }}
+          registry_username: ${{ env.REGISTRY_USERNAME }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          image_tag: ${{ needs.create_release.outputs.calver }}
+          image_tag_extra: true
+          cache_enabled: true
+          extra_args: >
+            --reproducible
+            --cleanup
+            --verbosity info
+            --build-arg VERSION=${{ needs.create_release.outputs.calver }}

@@ -1,0 +1,177 @@
+##################################################
+# Name: kaniko.yaml
+# Description: Workflow to build containers with Kaniko
+##################################################
+
+name: Kaniko
+
+on:
+  pull_request:
+    branches:
+      - "trunk"
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - review_requested
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+
+env:
+  PROJECT: ${{ github.repository }}
+
+  REGISTRY_NAMESPACE: ${{ github.repository_owner }}
+  REGISTRY_USERNAME: ${{ github.actor }}
+  REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PAT }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test_container:
+    name: Test Container
+
+    runs-on: ${{ matrix.os }}
+
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - ubuntu-latest
+
+    steps:
+      - id: checkout_repository
+        name: Checkout repository
+        uses: actions/checkout@v2
+
+      - id: pull_request_source_dest_branch
+        name: Pull request source and destination branch
+        env:
+          BRANCH_SOURCE: ${{ github.head_ref }}
+          BRANCH_DEST: ${{ github.base_ref }}
+        run: |
+          echo "Pull Request Source: ${BRANCH_SOURCE}"
+          echo "Pull Request Destination: ${BRANCH_DEST}"
+        if: github.event_name == 'pull_request'
+
+      - id: docker_build
+        name: Docker Image Build
+        run: >
+          docker image build
+          --rm
+          --tag test:latest
+          .
+
+      - id: docker_test
+        name: Docker Container Test
+        run: >
+          docker container run
+          --rm
+          --name test
+          test:latest
+
+      # Turtles all the way down
+      - id: action_test
+        name: Action Test
+        uses: ./
+        with:
+          loglevel: "INFO"
+          registry: ghcr.io
+          registry_namespace: ${{ env.REGISTRY_NAMESPACE }}
+          registry_username: ${{ env.REGISTRY_USERNAME }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          image_tag_extra: true
+          cache_enabled: false
+          extra_args: >
+            --reproducible
+            --cleanup
+            --verbosity info
+            --build-arg VERSION=latest
+            --no-push
+        continue-on-error: true
+
+  #########################
+  # Publish Container
+  #
+  # Pushes a "latest" image used for development purposes
+  #########################
+
+  release_publish_docker:
+    name: Publish Release to OCI Container Registry
+
+    needs:
+      - test_container
+
+    runs-on: ${{ matrix.os }}
+
+    timeout-minutes: 30
+    continue-on-error: false
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - ubuntu-latest
+
+    # Don't run on pushes AND don't run on $default-branch
+    # Container builds for that branches are expected to be done via a release pipeline.
+    if: >
+      github.event_name != 'push'
+      &&
+      github.ref != 'refs/head/trunk'
+
+    steps:
+      - id: checkout_repository
+        name: Checkout repository with all history and tags
+        uses: actions/checkout@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          fetch-depth: 0
+          submodules: false
+          clean: true
+          persist-credentials: true
+
+      # Attempt to publish the container using the Kaniko Cache
+      - id: publish_package_container_cached
+        name: Publish Package to Container Registry (Cache Enabled)
+        uses: ./
+        with:
+          loglevel: "INFO"
+          registry: ghcr.io
+          registry_namespace: ${{ env.REGISTRY_NAMESPACE }}
+          registry_username: ${{ env.REGISTRY_USERNAME }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          image_tag_extra: true
+          cache_enabled: true
+          extra_args: >
+            --reproducible
+            --cleanup
+            --verbosity info
+            --build-arg VERSION=latest
+        continue-on-error: true
+
+      # Take another stab with the Kaniko Cache disabled
+      - id: publish_package_container_uncached
+        name: Publish Package to Container Registry (Cache Disabled)
+        uses: ./
+        with:
+          loglevel: "INFO"
+          registry: ghcr.io
+          registry_namespace: ${{ env.REGISTRY_NAMESPACE }}
+          registry_username: ${{ env.REGISTRY_USERNAME }}
+          registry_password: ${{ env.REGISTRY_PASSWORD }}
+          image_tag_extra: true
+          cache_enabled: false
+          extra_args: >
+            --reproducible
+            --cleanup
+            --verbosity info
+            --build-arg VERSION=latest
+        continue-on-error: true
+        if: steps.publish_package_container_cached.outcome == 'failure'

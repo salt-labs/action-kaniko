@@ -1,0 +1,66 @@
+##################################################
+# Name: kaniko.yaml
+# Description: Workflow to build containers with Kaniko
+##################################################
+
+name: Kaniko
+
+on:
+  push:
+    branches:
+      - feature/*
+      - release/*
+      - bug/*
+      - environment/development
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+
+  pull_request:
+    branches:
+      - trunk
+      - release/*
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - ready_for_review
+      - review_requested
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+
+jobs:
+  kaniko_build:
+    name: Kaniko Build
+
+    runs-on: "${{ matrix.os }}"
+
+    timeout-minutes: 30
+
+    strategy:
+      fail-fast: true
+      matrix:
+        os:
+          - ubuntu-latest
+
+    steps:
+      - id: checkout_repository
+        name: Checkout Repository
+        uses: actions/checkout@master
+
+      - id: kaniko_build
+        name: Kaniko build
+        # Versioned
+        #uses: salt-labs/action-kaniko@2020.8.0
+        # Latest from repo
+        #uses: salt-labs/action-kaniko@trunk
+        # Latest from registry
+        uses: docker://ghcr.io/salt-labs/action-kaniko:latest
+        with:
+          loglevel: "INFO"
+          registry: docker.io
+          registry_namespace: "${{ secrets.REGISTRY_ORG }}"
+          registry_username: "${{ secrets.REGISTRY_USER }}"
+          registry_password: "${{ secrets.REGISTRY_PAT }}"
+          cache_enabled: true

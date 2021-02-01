@@ -1,0 +1,104 @@
+##################################################
+# Name: action.yaml
+# Description: GitHub Action for Kaniko
+##################################################
+
+name: "Kaniko Publisher"
+author: "Salt Labs"
+description: "Builds and publishes container images using Kaniko"
+branding:
+  icon: "activity"
+  color: "red"
+
+inputs:
+  # INPUT_LOGLEVEL
+  loglevel:
+    description: "Sets the action log level from DEBUG,INFO,WARN,ERR"
+    required: false
+    default: "info"
+
+  # INPUT_REGISTRY
+  registry:
+    description: "The package registry where the resulting image will be pushed"
+    required: false
+    default: "ghcr.io"
+
+  # INPUT_REGISTRY_USERNAME
+  registry_username:
+    description: "The username for authentication to the package registry"
+    required: false
+
+  # INPUT_REGISTRY_PASSWORD
+  registry_password:
+    description: "The password for authentication to the package registry"
+    required: false
+
+  # INPUT_REGISTRY_NAMESPACE
+  registry_namespace:
+    description: "The namespace where the image will be placed"
+    required: false
+
+  # INPUT_IMAGE_NAME
+  image_name:
+    description: "The Image Name to be used"
+    required: false
+
+  # INPUT_IMAGE_TAG_PREFIX
+  image_tag_prefix:
+    description: "Prefix to be stripped from the tag"
+    required: false
+
+  # INPUT_IMAGE_TAG
+  image_tag:
+    description: "The Image Tag to be used"
+    required: false
+
+  # INPUT_IMAGE_TAG_EXTRA
+  image_tag_extra:
+    description: "An opinionated set of extra tags to apply. See the README for details."
+    required: false
+
+  # INPUT_CACHE_ENABLED
+  cache_enabled:
+    description: "Enables the Build cache. TRUE/FALSE"
+    required: false
+
+  # INPUT_CACHE_TTL
+  cache_ttl:
+    description: "The cache timeout in hours. default is 2 weeks."
+    required: false
+    default: "336h0m0s"
+
+  # INPUT_CACHE_REPO
+  cache_repo:
+    description: "Repository to be used for Kaniko build cache"
+    required: false
+    default: "cache"
+
+  # INPUT_CACHE_DIRECTORY
+  cache_directory:
+    description: "The local directory to store the build cache"
+    required: false
+    default: "/cache"
+
+  # INPUT_DOCKERFILE
+  dockerfile:
+    description: "The name of the Dockerfile"
+    required: false
+    default: "Dockerfile"
+
+  # INPUT_EXTRA_ARGS
+  extra_args:
+    description: "Additional arguments to be passed to Kaniko"
+    required: false
+    default: ""
+
+runs:
+  using: "docker"
+  #image: docker://ghcr.io/salt-labs/action-kaniko:stable
+  image: Dockerfile
+  entrypoint: "/scripts/entrypoint.sh"
+  env:
+    action: "TRUE"
+  args:
+    - ""
