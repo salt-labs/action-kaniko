@@ -78,7 +78,7 @@ COPY "scripts" "/scripts"
 ENV PATH /kaniko:/scripts/:/usr/bin:/usr/sbin:/usr/local/bin:/usr/local/sbin:/bin:/sbin
 
 ENV HOME /kaniko
-ENV DOCKER_CONFIG /kaniko/.docker/
+ENV DOCKER_CONFIG /kaniko/.docker
 ENV SSL_CERT_DIR /kaniko/ssl/certs
 
 ENTRYPOINT [ "/scripts/entrypoint.sh" ]

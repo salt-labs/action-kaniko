@@ -62,6 +62,10 @@ export EXTRA_ARGS="${INPUT_EXTRA_ARGS}"
 REGISTRY_AUTH=$( echo -n "${REGISTRY_USERNAME}:${REGISTRY_PASSWORD}" | base64 )
 export REGISTRY_AUTH
 
+# Kaniko expects a specific location for the auth files.
+export DOCKER_CONFIG="${DOCKER_CONFIG:-/kaniko/.docker}"
+export DOCKER_AUTH="${DOCKER_CONFIG}/config.json"
+
 #########################
 # Declarations
 #########################
@@ -383,9 +387,17 @@ export ARGS="${CACHE_ARGS,,} ${CONTEXT,,} ${DOCKERFILE} ${DESTINATION1,,} ${DEST
 # Kaniko Credentials
 #########################
 
+if [[ ! -d "${DOCKER_CONFIG}" ]];
+then
+
+	writeLog "INFO" "Creating Docker config directory ${DOCKER_CONFIG}"
+	mkdir -p "${DOCKER_CONFIG}" || { writeLog "ERROR" "Failed to create Docker config directory" ; exit 1 ; }
+
+fi
+
 writeLog "INFO" "Creating Kaniko credentials for ${REGISTRY,,}"
 
-cat <<- EOF > "${DOCKER_CONFIG:-/kaniko/.docker/}config.json"
+cat <<- EOF > "${DOCKER_AUTH}"
 
 {
 	"auths": {
@@ -411,6 +423,7 @@ KANIKO_VERSION="${KANIKO_VERSION//[[:space:]]/}"
 
 writeLog "INFO" "Running Kaniko ${KANIKO_VERSION:-unknown} with the following arguments: --force ${ARGS:-unknown}"
 
+# shellcheck disable=2086
 /kaniko/executor --force ${ARGS} || { writeLog "ERROR" "Failed to run Kaniko!" ; exit 1 ; }
 
 exit 0
