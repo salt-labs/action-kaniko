@@ -119,12 +119,9 @@ jobs:
         os:
           - ubuntu-latest
 
-    # Don't run on pushes AND don't run on $default-branch
-    # Container builds for that branches are expected to be done via a release pipeline.
-    if: >
-      github.event_name != 'push'
-      &&
-      github.ref != 'refs/head/trunk'
+    # Don't run on any merges into the $default-branch.
+    # Container builds for that branches are expected to be done via a seperate release pipeline.
+    if: github.ref != 'refs/head/trunk'
 
     steps:
       - id: checkout_repository
