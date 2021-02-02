@@ -35,4 +35,3 @@ Infrastructure:
 # Add 'Pulumi' label to Infra As Code changes
 Pulumi:
   - "infra/**"
-

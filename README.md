@@ -48,11 +48,11 @@ The following inputs are available:
 | Input | Required | Description | Examples |
 | :---- | :------- | :---------- | :------ |
 | log_level | False | Sets the log level for debugging purposes | ```DEBUG```</br>```INFO```</br>```WARN```</br>```ERR``` |
-| registry | False | Sets the Container Registry to push the images | ```docker.pkg.github.com```</br>```docker.io``` |
-| registry_username | False | The username to auth with the registry | ```${{secrets.DOCKER_USERNAME}}``` |
-| registry_password | False | The password to auth with the registry | ```${{secrets.DOCKER_PASSWORD}}``` |
-| registry_namespace | False | The namespace you want the image pushed to. Defaults to the GitHub organization. | ```dockerhubnamespace``` |
-| image_name | False | The image name to be used. Defaults to the GitHub repository | ```my_app``` |
+| registry | False | Sets the Container Registry to push the images | ```ghcr.io```</br>```docker.io``` |
+| registry_username | False | The username to auth with the registry | ```${{secrets.REGISTRY_USERNAME}}``` |
+| registry_password | False | The password to auth with the registry | ```${{secrets.REGISTRY_PASSWORD}}``` |
+| registry_namespace | False | The namespace you want the image pushed to. Defaults to the GitHub organization. | ```salt-labs``` |
+| image_name | False | The image name to be used. Defaults to the GitHub repository | ```my-amazing-app``` |
 | image_tag_prefix | False | A prefix that you want stripped removed from the image tag | ```my_org_name-myapp``` |
 | image_tag | False | A Custom image tag to apply | ```my_orgname-myapp-latest``` |
 | image_tag_extra | False | Enable to apply an opinionated set of additional tags dependant on the git branch running the Workflow.</br>- ```master (:stable)```</br>- ```feature/* (:feature)```</br>- ```bug/ (:bug)```</br>- ```release/ (:release)``` | ```true```</br>```false``` |

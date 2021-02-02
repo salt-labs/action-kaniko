@@ -14,14 +14,14 @@ on:
       - submitted
     paths-ignore:
       - "docs/**"
-      - "**.md"
+      - "*.md"
   # Treating merged PRs into trunk as "releases"
   push:
     branches:
       - "trunk"
     paths-ignore:
       - "docs/**"
-      - "**.md"
+      - "*.md"
 
 env:
   PROJECT: ${{ github.repository }}
@@ -201,7 +201,7 @@ jobs:
           registry_password: ${{ env.REGISTRY_PASSWORD }}
           image_tag: ${{ needs.create_release.outputs.calver }}
           image_tag_extra: true
-          cache_enabled: true
+          cache_enabled: false
           extra_args: >
             --reproducible
             --cleanup

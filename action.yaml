@@ -73,7 +73,7 @@ inputs:
   cache_repo:
     description: "Repository to be used for Kaniko build cache"
     required: false
-    default: "cache"
+    default: "kaniko-cache"
 
   # INPUT_CACHE_DIRECTORY
   cache_directory:

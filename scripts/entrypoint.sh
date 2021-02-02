@@ -50,7 +50,7 @@ export GIT_BRANCH="${GITHUB_REF##*/}"
 # Kaniko Cache
 export CACHE_ENABLED="${INPUT_CACHE_ENABLED:=FALSE}"
 export CACHE_TTL="${INPUT_CACHE_TTL:=336h0m0s}"
-export CACHE_REPO="${INPUT_CACHE_REPO:=cache}"
+export CACHE_REPO="${INPUT_CACHE_REPO:=kaniko-cache}"
 export CACHE_DIRECTORY="${INPUT_CACHE_DIRECTORY:=/cache}"
 
 # Kaniko Other

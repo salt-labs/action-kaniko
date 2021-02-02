@@ -17,7 +17,7 @@ on:
       - review_requested
     paths-ignore:
       - "docs/**"
-      - "**.md"
+      - "*.md"
 
 env:
   PROJECT: ${{ github.repository }}
@@ -174,5 +174,5 @@ jobs:
             --cleanup
             --verbosity info
             --build-arg VERSION=latest
-        continue-on-error: true
+        continue-on-error: false
         if: steps.publish_package_container_cached.outcome == 'failure'
