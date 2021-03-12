@@ -67,8 +67,8 @@ jobs:
 
       - id: prep_release
         name: Prepare for Release
-        #uses: docker://ghcr.io/salt-labs/action-release-prep:stable
-        uses: salt-labs/action-release-prep@trunk
+        uses: docker://ghcr.io/salt-labs/action-release-prep:stable
+        #uses: salt-labs/action-release-prep@trunk
         with:
           loglevel: "INFO"
           tag_enable: "TRUE"
@@ -141,6 +141,7 @@ jobs:
     outputs:
       # Prep-Release
       calver: ${{ steps.prep_release.outputs.calver }}
+      semver: ${{ steps.prep_release.outputs.semver }}
       changelog: ${{ steps.prep_release.outputs.changelog }}
       repo_owner: ${{ steps.prep_release.outputs.repo_owner }}
       repo_name: ${{ steps.prep_release.outputs.repo_name }}
